@@ -1,0 +1,283 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r echo = F}
+library(ggplot2)
+library(dplyr)
+library(caret)
+
+load("dados//films.Rdata")
+```
+
+# Data structure
+
+We have 6 data frames in total. The string "\\N" is used to encode missing values. We have replaced them by *NA* in order to take advantage of the default methods to isolate these values. The 6 data frames are:
+
+## **t_basics**
+
+* **t_basics** contains basic information about the items: movies, films. **tconst** is the primary key that links this dataframe to the others.
+
+* It is a premise of this work that data concerning series will not be considered. This information is defined in the variable **titleType**. We can exclude right away the following types: 
+
+  * "tvEpisode","tvMiniSeries","tvSeries","videoGame"
+  
+* There is a considerable ammount of missing values in the variables **startYear**, **endYear**, **runtimeMinutes** and **genres**. 
+  
+* **startYear** appears to function as "Release Year" in the titles that do not have an episodic format.
+
+* Columns 
+  
+* **genre** is a concatenated string. Considering we are certain to be interested in this information, a solution to extract this data to an usable format must be found.
+  
+```{r}
+apply(t_basics,2,function(x){sum(is.na(x))})
+```
+  
+  
+## **crew**  
+  
+* **crew** has 2 unique fields: **directors** and **writers**. 
+
+  * There are 262500 missing values in **directors** and 647145 in **writers**. This a considerable part of the 1.8 M total observations.
+
+```{r}
+apply(crew,2,function(x){sum(is.na(x))})
+```
+
+* **ratings** is, by its nature, one of the most promising data frames. Its two variables, **averageRating** and **numVotes** are direct, quantifiable measures of the success of a title. 
+
+  * This data frame has no missing values. **averageRating** has all its entries in the $[1,0]$ range, as expected, and the **numVotes** are in the $[5,2966829]$ range. The title with the maximum number of votes is "The Shawshank Redemption", which is plausible. 
+  
+  * This data frame appears to function as the core of the dataset, in the sense that as long as a title has a valid entry in this table, gaps in the associated tables are tolerated. 
+
+```{r}
+apply(ratings,2,function(x){sum(is.na(x))})
+summary(ratings)
+t_basics[t_basics$tconst == ratings[which.max(ratings$numVotes),]$tconst,]
+```
+
+* **akas** contains information about the regional adaptations of the films. 
+
+  * The variable **title** is an encoding disaster and is best ignored. 
+  
+  * No performance metrics aree available for each separate version, so it stands to be determined whether the corresponding entry in **ratings** is an aggregated score, average or it pertains only to the main release
+
+```{r}
+apply(akas,2,function(x){sum(is.na(x))})
+```
+
+* **principals** contains information about the cast and team behind a title. 
+
+* **n_basics** is an auxiliary table with information on people of interest that are referenced in the **principals** data frame. 
+
+  * The variable **primaryProfession** and **knownforTitles** are concatenated strings which may prove problematic if we decide focus our analysis in the crew facet of the matter.
+
+
+## Data pre processing
+
+### Splitting concatenated strings
+
+Should we consider one-hot encoding? There are 30 genres in total.
+
+```{r}
+#how many genres are at maximum?
+stringr::str_count(t_basics$genres,",") %>% max(na.rm = T)
+#maximum 2 commas, so each title has 3 genres max
+t_basics <- cbind(t_basics,
+                  read.csv(textConnection(t_basics[["genres"]]),row.names = NULL,header = F)
+                  )
+
+generos <- unique(reshape2::melt(t_basics,
+                                 measure.vars = c("V1","V2","V3"))$value)
+
+temp<- merge(t_basics,
+             ratings,
+             by = "tconst",
+             all.x = T, all.y = F)
+temp <-
+  merge(temp,
+        crew,
+        by = "tconst",
+        all.x = T, all.t = F)
+
+## Encoder
+
+encoder<-caret::dummyVars("~.",data=temp[,c("V1","V2","V3")])
+funcionou<-predict(encoder,newdata=temp[,c("V1","V2","V3")])
+funcionou <- data.frame(funcionou)
+
+  for(i in generos[-c(17,30)]){
+    funcionou[,paste(i)] <-
+    funcionou %>% select(names(funcionou)[grepl(i,names(funcionou))]) %>%
+    apply(1,sum,na.rm =T)}
+
+temp <- cbind(temp,funcionou[,84:111])
+
+temp_long <- temp %>% reshape2::melt(measure.vars = 
+```
+
+
+Uma das possibilidades poderia ser  tentar verificar se algum gênero teve  alguma mudança(em relação as votações e ratings) em 2020 em relação aos anos anteriores. 
+
+Essa mudança poderia ser influenciada pela pandemia, quarentena, etc. Ou seja...se as pessoas estão a ver algum gênero de filme com mais frequência em 2020, em comparação com anos anteriores.
+
+
+[12:40 PM, 10/31/2020] +351 918 508 734: Outra possibilidade seria verificar como a pandemia diminuiu a produção de filmes(títulos lançados).
+
+
+
+```{r}
+ls()
+head(t_basics)
+```
+
+
+
+
+uso do IMDB
+
+```{r}
+
+
+
+temp %>%
+  filter(startYear %in% c(1980:2020)) %>%
+  ggplot() + 
+  geom_bar(stat = "identity", aes(
+    x = cut_width(startYear, 10, center = 2005), 
+    y = numVotes), col = rgb(147/255,191/255,235/255)) +
+  theme_light() + 
+  theme(axis.text.x = element_text(angle = 90)) + 
+  scale_x_discrete(breaks = c((cut_width(temp$startYear, 10, center = 2005) %>% levels)[12],
+                              (cut_width(temp$startYear, 10, center = 2005) %>% levels)[13],
+                              (cut_width(temp$startYear, 10, center = 2005) %>% levels)[14],
+                              (cut_width(temp$startYear, 10, center = 2005) %>% levels)[15]),
+                     labels = c("1980-1990","1990-2000","2000-2010","2010-2020"))
+
+
+# temp %>% filter(startYear > 1950) %>%
+#   group_by(startYear) %>%
+#   summarise(lançamentos = length(unique(tconst))) %>%
+# ggplot() + 
+#   geom_bar(stat = "identity", aes(x = startYear, y = numVotes), binwidth = 10) + 
+#   theme_light() + 
+#   theme(axis.text.x = element_text(angle = 90))
+(cut_width(temp$startYear, 10, center = 2005) %>% levels)[12]
+```
+
+# Plots
+
+```{r}
+temp %>%
+  filter(startYear %in% c(1980:2020) &
+           titleType == "movie") %>%
+  ggplot() + 
+  geom_bar(stat = "identity", aes(
+    x = startYear, 
+    y = numVotes), fill = rgb(147/255,191/255,235/255)) +
+  theme_light() + 
+  theme(axis.text.x = element_text(angle = 90)) + 
+  facet_grid(titleType~.)
+
+```
+
+
+
+```{r}
+#produçao por ano
+temp %>% filter(startYear %in% c(1980:2020) &
+                  titleType == "movie") %>%
+  group_by(startYear) %>%
+  summarise(lançamentos = length(unique(tconst))) %>%
+ggplot() +
+  geom_bar(stat = "identity", aes(x = startYear, y = lançamentos),
+           fill = rgb(147/255,191/255,235/255)) +
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 90)) + 
+  labs(y = "releases")
+
+temp %>%
+  filter(startYear %in% c(1980:2020) &
+           titleType == "movie") %>%
+  ggplot() + 
+  geom_point(aes(x = numVotes,
+                 y = averageRating,
+                 col = (startYear == 2020))) + 
+  theme_light() + 
+  scale_color_manual(values = c(rgb(147/255,191/255,235/255),"red"))
+
+```
+
+
+
+```{r}
+#comparar por generos
+temp %>% filter(startYear %in% c(1980:2020) &
+                  titleType == "movie") %>%
+  ggplot() + 
+  geom_boxplot(data = (. %>% filter(Action == 1)), aes(y = averageRating)) +
+  geom_boxplot(data = (. %>% filter(Romance == 1)), aes(y = averageRating, x = 1)) +
+  geom_boxplot(data = (. %>% filter(Documentary == 1)), aes(y = averageRating, x = 2)) +
+  geom_boxplot(data = (. %>% filter(Drama == 1)), aes(y = averageRating, x = 3)) +
+  geom_boxplot(data = (. %>% filter(Comedy == 1)), aes(y = averageRating, x = 4)) +
+  geom_boxplot(data = (. %>% filter(Music == 1)), aes(y = averageRating, x = 5)) +
+  theme_light() + 
+  labs(x = "") + 
+  facet_grid(as.character(startYear == 2020)~.,labeller = labeller(c("FALSE" = "A", "TRUE" = "B"))) + 
+  scale_x_continuous(breaks = seq(0,5,1),labels = c("Action","Romance","Documentary","Drama","Comedy","Music"))
+
+```
+
+
+
+```{r}
+temp %>% filter(startYear %in% c(1980:2020) &
+                  titleType == "movie") %>%
+  group_by(startYear, Action) %>%
+  summarise(releases = length(unique(tconst))) %>%
+  ggplot() + 
+  geom_boxplot(data = (. %>% filter(Action == 1)), aes(y = releases)) +
+  # geom_boxplot(data = (. %>% filter(Romance == 1)), aes(y = releases, x = 1)) +
+  # geom_boxplot(data = (. %>% filter(Documentary == 1)), aes(y = releases, x = 2)) +
+  # geom_boxplot(data = (. %>% filter(Drama == 1)), aes(y = releases, x = 3)) +
+  # geom_boxplot(data = (. %>% filter(Comedy == 1)), aes(y = releases, x = 4)) +
+  # geom_boxplot(data = (. %>% filter(Music == 1)), aes(y = releases, x = 5)) +
+  theme_light() + 
+  labs(x = "") + 
+  facet_grid(as.character(startYear == 2020)~.) + 
+  scale_x_continuous(breaks = seq(0,5,1),labels = c("Action","Romance","Documentary","Drama","Comedy","Music"))
+
+```
+
+
+
+```{r}
+# produçao de generos por ano
+
+temp %>%
+  filter(startYear %in% c(1980:2020) &
+         titleType == "movie") %>%
+  select(startYear,Action,Romance,Documentary,Drama,Comedy,Music) %>%
+  reshape2::melt(measure.vars = c("Action","Romance",
+                                  "Documentary","Drama","Comedy","Music")) %>%
+  group_by(startYear,variable) %>%
+  summarise(value = sum(value)) %>%
+  ggplot() + 
+  geom_boxplot(aes(y = value, col = variable)) + 
+  geom_boxplot(data = (. %>% filter(startYear == 2020)),aes(y = value, fill = variable), col = "red") + 
+  theme_light() + 
+  # facet_grid(as.character(startYear == 2020)~.) +
+  labs(col = "", x = "", y = "releases") + 
+  theme(legend.position = "none") +
+  scale_x_continuous(breaks = seq(-0.3,0.3,0.12),labels = c("Action","Romance","Documentary","Drama","Comedy","Music"))
+
+```
+
+
+
+
+
+
+

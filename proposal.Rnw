@@ -1,0 +1,324 @@
+\documentclass{article}
+
+\begin{document}
+\SweaveOpts{concordance=TRUE}
+
+\documentclass[twoside,a4paper,10pt]{article}
+\usepackage[a4paper,margin=3cm]{geometry}
+\usepackage[english]{babel}
+\usepackage[latin1]{inputenc}
+\usepackage{graphicx}
+\usepackage[fleqn]{amsmath}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{latexsym}
+\usepackage{mathpazo}
+\usepackage[super,square,numbers]{natbib}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{tabularx}
+%\usepackage{subfigure}
+%\usepackage{fixltx2e}
+\usepackage{textcomp}
+\usepackage{pdfpages}
+\usepackage{hhline}
+\usepackage{caption}
+\usepackage{subcaption}
+%\usepackage{chronology}
+\usepackage{hyperref}
+\usepackage{array}
+%---------------------------------------------------------------------------
+\usepackage{xcolor,listings}
+\lstset{upquote=true}
+%---------------------------------------------------------------------------
+\usepackage{multirow}
+\newcommand{\minitab}[2][l]{\begin{tabular}{#1}#2\end{tabular}}
+%---------------------------------------------------------------------------
+\usepackage{tikz}
+\usetikzlibrary{calc}
+\usetikzlibrary{arrows}
+
+\tikzstyle{block} = [draw, fill=white, rectangle, 
+minimum height=3em, minimum width=3em]
+\tikzstyle{sum} = [draw, fill=white, circle, node distance=1cm]
+\tikzstyle{input} = [coordinate]
+\tikzstyle{output} = [coordinate]
+\tikzstyle{pinstyle} = [pin edge={to-,thin,black}]
+%---------------------------------------------------------------------------
+\usetikzlibrary{arrows}
+\usepackage{datenumber}
+\usepackage{xifthen}
+
+% counters for calculating with dates
+\newcounter{startdate}
+\newcounter{enddate}
+\newcounter{tempdate}
+\newcounter{dateone}
+\newcounter{datetwo}
+
+% 
+\newcommand{\startenddiff}[6]{%
+	\setmydatenumber{startdate}{#1}{#2}{#3}%
+	\setmydatenumber{enddate}{#4}{#5}{#6}%
+	\setmydatenumber{tempdate}{#4}{#5}{#6}%
+	\addtocounter{tempdate}{-\thestartdate}%
+}
+
+%
+\newcommand{\datediff}[6]%
+{   \setmydatenumber{dateone}{#1}{#2}{#3}
+	\setmydatenumber{datetwo}{#4}{#5}{#6}
+	\addtocounter{dateone}{-\thestartdate}
+	\addtocounter{datetwo}{-\thestartdate}
+}
+
+%
+\newcommand{\drawtimeline}%
+{   \setdatebynumber{\thestartdate}
+	\pgfmathtruncatemacro{\numberofdays}{\thetempdate}
+	\pgfmathsetmacro{\daywidth}{\timelinewidth/\numberofdays}
+	\draw[-stealth] (0,0) -- (\timelinewidth,0) -- ++(0.3,0);
+	\foreach \x in {0,...,\numberofdays}
+	{ \ifthenelse{\thedateday = 1}
+		{ \ifcase\thedatemonth
+			\or \xdef\monthname{Jan}
+			\or \xdef\monthname{Feb}
+			\or \xdef\monthname{Mar}
+			\or \xdef\monthname{Apr}
+			\or \xdef\monthname{May}
+			\or \xdef\monthname{Jun}
+			\or \xdef\monthname{Jul}
+			\or \xdef\monthname{Aug}
+			\or \xdef\monthname{Sep}
+			\or \xdef\monthname{Oct}
+			\or \xdef\monthname{Nov}
+			\or \xdef\monthname{Dec}    
+			\else       
+			\fi
+			\draw (\x*\daywidth,-0.2) -- (\x*\daywidth,0.2) node[left,rotate=90,font=\tiny,pos=0.2] {\monthname\ \thedateyear};
+		}{}
+		\ifthenelse{\equal{\datedayname}{Monday}}
+		{ \draw (\x*\daywidth,0.05) -- (\x*\daywidth,-0.05);
+		}{}
+		\addtocounter{datenumber}{1}
+		\setdatebynumber{\thedatenumber}
+	}
+}
+
+\newcommand{\timeentry}[8][gray]% [options] start date, end date, description
+{ \datediff{#2}{#3}{#4}{#5}{#6}{#7}
+	\pgfmathtruncatemacro{\numberofdays}{\thetempdate}
+	\pgfmathsetmacro{\daywidth}{\timelinewidth/\numberofdays}
+	\draw[opacity=0.7,line width=1.5mm,line cap=round,#1] (\thedateone*\daywidth,0) -- (\thedatetwo*\daywidth,0)
+	node[right,rotate=60,pos=0.5,font=\scriptsize,yshift=0.1cm] {#8};
+}
+
+\newcommand{\timeentryoffset}[8][gray]% [options] start date, end date, description
+{ \datediff{#2}{#3}{#4}{#5}{#6}{#7}
+	\pgfmathtruncatemacro{\numberofdays}{\thetempdate}
+	\pgfmathsetmacro{\daywidth}{\timelinewidth/\numberofdays}
+	\draw[opacity=0.7,line width=1.5mm,line cap=round,#1] (\thedateone*\daywidth,0) -- (\thedatetwo*\daywidth,0) node[inner sep=0,minimum size=0,pos=0.5] (node) {};
+	\draw[gray, opacity=0.7, dotted] (node) -- ++(60:1.8cm) node[inner sep=0,minimum size=0,right,rotate=60,pos=1,font=\scriptsize,yshift=0.1cm] {#8};
+}
+
+\newcommand{\timeentrydoubleoffset}[8][gray]% [options] start date, end date, description
+{ \datediff{#2}{#3}{#4}{#5}{#6}{#7}
+	\pgfmathtruncatemacro{\numberofdays}{\thetempdate}
+	\pgfmathsetmacro{\daywidth}{\timelinewidth/\numberofdays}
+	\draw[opacity=0.7,line width=1.5mm,line cap=round,#1] (\thedateone*\daywidth,0) -- (\thedatetwo*\daywidth,0) node[inner sep=0,minimum size=0,pos=0.5] (node) {};
+	\draw[gray, opacity=0.7, dotted] (node) -- ++(60:3.6cm) node[inner sep=0,minimum size=0,right,rotate=60,pos=1,font=\scriptsize,yshift=0.1cm] {#8};
+}
+%---------------------------------------------------------------------------
+\usepackage{fancyhdr}
+%---------------------------------------------------------------------------
+\usepackage{enumitem}
+%---------------------------------------------------------------------------
+%\usepackage{draftwatermark}
+%\SetWatermarkText{DRAFT}
+%\SetWatermarkScale{1}
+
+%===========================================================================
+\begin{document}
+	
+%---------------------------------------------------------------------------
+\pagestyle{fancy}
+
+\fancypagestyle{capa}{\fancyhf{}\renewcommand{\headrulewidth}{0pt}\fancyfoot[R]{Porto, 13th November 2020}}
+\thispagestyle{capa}
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.50\linewidth]{Logo_FCUP.png}
+\end{figure}
+
+\begin{center}
+	\vspace{0.5cm}
+	\LARGE
+	Data Visualization\\
+	\vspace{4cm}
+	\LARGE
+	\textbf{Project Proposal}\\
+	\Large
+	\vspace{1cm}
+	Effects of historical events on cinematographic preferences
+\end{center}
+
+\vspace{8cm}
+
+\begin{itemize}[topsep=0pt,itemsep=6pt,partopsep=0pt, parsep=0pt]
+    \item[] Alberto Jorge Machado - 200202358
+    \item[] Francisco Braamcamp de Figueiredo - 200804762
+    \item[] Rodrigo de Oliveira Salles - 201908577
+\end{itemize}
+
+%---------------------------------------------------------------------------
+\pagestyle{empty}
+\cleardoublepage
+\setcounter{page}{1}
+%---------------------------------------------------------------------------
+\pagestyle{plain}
+
+\section{Introduction}
+
+2020 has been an especially difficult year. The Covid-19 pandemic forced people to change habits and behaviors[1]. We are living in a historical period with developments that are still unpredictable. How will these events influence cinematographic productions? Will there be more productions focused on themes related to the pandemic?\\
+
+As this difficult period is not yet over, the best way to try to answer these questions is to try to understand what happened to cinematographic production in previous years, when important historical events occurred. Was it possible to see a greater production of war films after the terrorist attacks of September 11, 2001? Or did any genre stand out after the Arab Spring 2010?\\
+
+Did historical events in any way influence the financial return of productions? Higher production of a given genre does not necessarily indicate a greater financial return.\\
+
+These and other issues will be investigated in the project.\\
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=\linewidth]{timeline1.png}
+	\caption{Timeline of some historical events}
+	\label{fig:timeline_historical_events}
+\end{figure}
+
+
+\section{Project Objectives}
+
+This project aims to investigate the following hypotheses:
+\begin{itemize}[topsep=6pt,itemsep=6pt,partopsep=0pt, parsep=0pt]
+    \item The production (quantity) of films of certain genres is influenced by historical events from previous years;
+    \item The productions with the highest financial return were those that portrayed historical events from previous years;
+    \item The pandemic influenced the voting of films in the year 2020. Some genres will be more voted due to the influence of the pandemic.
+    \item The film industry should invest its resources in productions that portray pandemic events
+\end{itemize}
+\medskip
+If, when carrying out the analysis, an increase in the production of a given genre is perceived, outside the defined historical events, it is also intended to be verified, in the indicated period, what may have happened in real life that justifies this increase.
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.8\linewidth]{bargraph.jpg}
+	\caption{Annual film production - Constant growth in recent years}
+	\label{fig:Annual film production}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.9\linewidth]{fig3.jpg}
+	\caption{Annual film production - Yearly film production by genre. 2020 in red}
+	\label{fig:Yearly film production by genre}
+\end{figure}
+
+\section{Materials and Methodology}
+
+A CRISP-DM based approach will be adopted for this project development. The first step of the work will be to establish a meaningful goal for the project assessments, what will imply business understanding, and to formulate hypothesis. This step is performed along with the understanding of the data, the second step of the CRISP-DM approach.
+
+The following step will be to prepare the data, i.e., to perform some cleaning of the data that is useless for the objectives this work aims to, to merge different datasets, etc.
+
+The typical modelling step from CRISP-DM approach will be replaced by the creation of visualizations that will aim to respond to the formulated hypothesis. This will be followed by evaluation and a return to the very first step: business understanding.
+
+
+
+\section{Datasets}
+Six datasets were made available for the project: "name.basics", "title.ratings", "title.principals", "title.crew", "title.basics", "title.akas". All datasets are compressed, in .tsv format (tab separeted values), and have, uncompressed, size of 4.2 Gb.
+
+\bigskip
+\textbf{"title.basics.tsv"}
+
+The following figure shows information of interest, such as the title of the production, the year of release and the genre of the film. The dataset consists on 7.281.233 observations.
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=\linewidth]{Title_Basics.png}
+	\caption{Title.basics table excerpt}
+	\label{fig:title_basics}
+\end{figure}
+
+Due to space problems, images of the first lines of the other datasets will not be shown, but only the most relevant information.
+
+\bigskip
+\textbf{"title.ratings.tsv"}
+
+Dataset composed of 1.086.028 observations and 3 attributes: "tcosnt", "avarageRatings" and "numVotes".
+
+All attributes will be maintained because they represent information of interest to the project.
+
+\bigskip
+\textbf{"title.principals.tsv"}
+
+Dataset composed of 22.947.292 observations and 6 attributes: "tconst", "ordering", "nconst", "category", "job", "characters".
+
+This dataset will be kept for eventual consultations, but at the first moment it does not present relevant information for the project.
+
+\bigskip
+\textbf{"title.crew.tsv"}
+
+Dataset composed of 7.281.233 observations and 3 attributes: "tconst", "directors", "writers". This dataset will be kept for eventual consultations, despite not presenting important information for the project.
+
+\bigskip
+\textbf{"title.akas.tsv"}
+
+Dataset composed of 14.697.949 observations and 8 attributes: "titleId", "ordering", "title", "region", "language", "types", "attributes", "isOriginalTitle".
+
+The dataset presents a series of problems related to coding, missing values, and does not represent information relevant to the project. Thus, this data set will not be considered for the project.
+
+\bigskip
+\textbf{"name.basics.tsv"}
+
+Dataset composed of 9.068.515 observations and 6 attributes: "nconst", "primaryName", "birthYear", "deathYear", "primaryProfession", "knownForTitles".
+
+The dataset presents information that will not be used directly, but will be maintained, as it represents the possibility of references regarding the genres of the films.
+
+
+
+\subsection{Datasets Transformations}
+Some transformations were necessary to carry out the first analysis. The main ones are described below:
+
+\begin{itemize}[topsep=6pt,itemsep=6pt,partopsep=0pt, parsep=0pt]
+    \item The column "isAdult" (if it is for adults) and "endYear" (year of end of TV production) of the "title.basics" dataset do not present information of interest to the project and will be eliminated; 
+    \item The "genres" attribute of the "title.basics" dataset presents some categories that will not be considered for the project ("videoGame","tvEpisode", "tvMiniSeries" and "tvSeries"), which will be deleted; This operation removes 5.498.916 instances from the dataset (26.561 "videoGame", 5.243.542 "tvEpisode", 33.942 "tvMiniSeries" and 194.871 "tvSeries") from a total of 7.281.233 observations.
+    \item The "startYear" attribute of the "title.basics" dataset will be filtered out. For the project, only the productions launched between 1980 and 2020 will be considered. The dataset presents 9.909 productions with dates after the begining of 2020. They are probably typos.
+    \item Datasets "title.basics", "title.ratings" and "title.crew" were merged, joined by the common attribute "tconst", which is the identifier of the title.
+\end{itemize}
+
+
+
+\section{Probable Project Problems}
+Some problems that could be noticed will be listed below:
+
+\begin{itemize}[topsep=6pt,itemsep=6pt,partopsep=0pt, parsep=0pt]
+    \item The year 2020 is not over yet, and a new wave of Covid-19 is plaguing the northern hemisphere. In this way new data will be attached to the project. A possible problem will be to match new data with existing data.
+    \item As we are working with large datasets, machines with basic processing characteristics take a long time to provide results of simple operations, such as loading a dataset and checking correlations between variables. One possible solution is to use cloud computing services, such as Google Cloud Platform or Google Collaboratory.
+    \item In order to carry out an honest analysis, some kind of weighting must be taken into account when counting productions, as shown in the figure below, cinematographic production has increased a lot over the years.
+    \item The gender attribute can have more than one classification for the same production. A possible solution will be to try to find the genre that most represents the production or to create new columns for the genres (one-hot encoding);
+    \item Datasets have different numbers of observations. When joining the tables, missing values will be checked for certain columns. These values should be filtered and eliminated. Or, we must use some method to assign observation values. One possibility is to use the random forest algorithm to complete these values.
+\end{itemize} 
+
+
+
+
+\section{Conclusions}
+
+The proposed project will be of great importance to our learning. It will be possible to deal with complex solution problems, and understand the line of development from data collection to visualization, in which it is possible to transmit a large amount of information making use of graphics and images.
+
+
+\section{Bibliography}
+[1] BROOKS, Samantha K et al. The psychological impact of quarantine and how to reduce it: rapid review of the evidence. London, Uk, v. 395, p.912-920, mar. 2020.
+
+\end{document}
+
+
+\end{document}
